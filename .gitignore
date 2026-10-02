@@ -1,0 +1,14 @@
+state/
+.venv/
+__pycache__/
+*.env
+.env
+.env.*
+!.env.example
+*.har
+*.xpi*
+*.log
+*.pem
+*.key
+*credentials*
+*playback*.json

@@ -1,0 +1,12 @@
+state/
+.git/
+.venv/
+__pycache__/
+*.env
+*.har
+*.xpi*
+.env
+.env.*
+*.log
+*.pem
+*.key
