@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from urllib.parse import urlsplit
@@ -138,6 +139,21 @@ def resolve_manifest(entry):
         return response.url
 
 
+def renewal_needed(state):
+    if (state['expires_at'] - time.time() <= 3600
+            or time.time() - state['captured_at'] >= 21600):
+        return True
+    # DAI sessions can disappear before their independent licence expires.
+    try:
+        resolve_manifest(state['manifest_url'])
+    except urllib.error.HTTPError as exc:
+        if exc.code in (404, 410):
+            print(f'Cached stream session unavailable (HTTP {exc.code}); renewing', flush=True)
+            return True
+        raise
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--force', action='store_true')
@@ -152,11 +168,20 @@ def main():
         if not args.force:
             try:
                 old = load_state()
-                if old['expires_at'] - time.time() > 3600 and time.time() - old['captured_at'] < 21600:
-                    print('Current playback authorization remains fresh')
-                    return
             except (OSError, ValueError, KeyError):
-                pass
+                old = None
+            if old is not None:
+                try:
+                    needed = renewal_needed(old)
+                except Exception as exc:
+                    # Avoid browser captures on transient upstream/network failures.
+                    code = getattr(exc, 'code', None)
+                    detail = f'HTTP {code}' if code else type(exc).__name__
+                    print(f'Cached manifest check failed ({detail}); prior state retained', flush=True)
+                    raise SystemExit(1)
+                if not needed:
+                    print('Current playback authorization and stream remain fresh')
+                    return
         for attempt in range(3):
             stage = 'browser capture'
             try:

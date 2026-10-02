@@ -75,9 +75,11 @@ directories must be writable by that UID/GID.
 
 ## Renewal behavior
 
-Every 15 minutes the supervisor checks the saved expiry locally. Fresh metadata
-causes no browser visit. It renews when less than one hour remains on the signed
-licence URL, or when the current pair is at least six hours old.
+Every 15 minutes the supervisor checks the saved expiry and requests the cached
+DASH manifest. A valid manifest causes no browser visit. It renews when the
+manifest returns HTTP 404 or 410, less than one hour remains on the signed licence
+URL, or the current pair is at least six hours old. Other manifest/network errors
+retain the previous state and retry the check after five minutes.
 
 A renewal launches an isolated headless Chromium profile, observes URL strings
 in the site's normal playback configuration, resolves the Google DAI manifest
